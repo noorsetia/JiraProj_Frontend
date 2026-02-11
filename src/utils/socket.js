@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// Prefer configured socket URL; fall back to current origin so deployed frontend connects to same host
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window?.location?.origin || '';
 
 let socket = null;
 
