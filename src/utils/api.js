@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Prefer VITE_API_URL when provided by the environment (Vercel). If missing,
-// fall back to a relative `/api` so the frontend can call the same origin in prod.
+// Prefer VITE_API_URL when provided by the environment (Vercel).
+// If missing, fall back to a relative `/api` so the frontend can
+// call the same origin in production.
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
@@ -15,10 +16,33 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('API Request:', config.method.toUpperCase(), config.url);
+
+    /*
+     * IMPORTANT:
+     * When sending FormData, do NOT manually set
+     * Content-Type to application/json.
+     *
+     * The browser/Axios will automatically set:
+     * multipart/form-data; boundary=...
+     *
+     * This is required for Multer to receive req.file.
+     */
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    } else {
+      config.headers['Content-Type'] = 'application/json';
+    }
+
+    console.log(
+      'API Request:',
+      config.method?.toUpperCase(),
+      config.url
+    );
+
     return config;
   },
   (error) => {
@@ -30,11 +54,15 @@ api.interceptors.request.use(
 // Handle response errors
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.status, response.config.url);
+    console.log(
+      'API Response:',
+      response.status,
+      response.config.url
+    );
+
     return response;
   },
   (error) => {
-    // Log more details to help diagnose network / CORS / env issues in production.
     console.error('API Error:', {
       status: error.response?.status,
       data: error.response?.data,
@@ -49,6 +77,7 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );

@@ -10,7 +10,8 @@ import {
   CalendarDays,
   FileText,
   List,
-  FileChartPie
+  FileChartPie,
+  Bot
 } from 'lucide-react';
 import { useState } from 'react';
 import { getInitials, getAvatarColor } from '../utils/helpers';
@@ -27,7 +28,8 @@ const Layout = ({ children }) => {
     { name: 'Calendar', href: '/calendar', icon: CalendarDays },
     { name: 'Forms', href: '/forms', icon: FileText },
     { name: 'List', href: '/list', icon: List },
-  { name: 'Summary', href: '/summary', icon: FileChartPie }
+    { name: 'Summary', href: '/summary', icon: FileChartPie },
+    { name: 'AI Assistant', href: '/ai-assistant', icon: Bot }
   ];
 
   const handleLogout = () => {

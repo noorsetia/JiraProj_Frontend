@@ -10,12 +10,16 @@ import Projects from './pages/Projects';
 import ProjectDetails from './pages/ProjectDetails';
 import KanbanBoard from './pages/KanbanBoard';
 import Sprints from './pages/Sprints';
+import AIAssistant from './pages/AIAssistant';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Forms from './pages/Forms';
 import ListPage from './pages/List';
 import Summary from './pages/SummaryPage';
 import Timeline from './pages/Timeline';
+import Notes from './pages/Notes';
+import Files from './pages/Files';
+import PublicProject from './pages/PublicProject';
 import './index.css';
 
 function App() {
@@ -103,6 +107,14 @@ function App() {
             }
           />
           <Route
+            path="/ai-assistant"
+            element={
+              <ProtectedRoute>
+                <AIAssistant />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/analytics"
             element={
               <ProtectedRoute>
@@ -157,6 +169,26 @@ function App() {
                 <Timeline />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/projects/:id/notes"
+            element={
+              <ProtectedRoute>
+                <Notes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id/files"
+            element={
+              <ProtectedRoute>
+                <Files />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/share/projects/:id"
+            element={<PublicProject />}
           />
 
           {/* Redirect root to dashboard */}

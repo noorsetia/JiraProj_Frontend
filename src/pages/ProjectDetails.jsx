@@ -304,11 +304,37 @@ const ProjectDetails = () => {
               View Timeline
             </Link>
             <Link
-              to={`/sprints?project=${id}`}
+              to={`/projects/${id}/sprints`}
               className="btn btn-secondary"
             >
               Manage Sprints
             </Link>
+            <Link
+              to={`/projects/${id}/notes`}
+              className="btn btn-secondary"
+            >
+              Notes
+            </Link>
+            <Link
+              to={`/projects/${id}/files`}
+              className="btn btn-secondary"
+            >
+              Code Files
+            </Link>
+
+            <button
+              onClick={() => {
+                const shareUrl =
+                  `${window.location.origin}/share/projects/${id}`;
+
+                navigator.clipboard.writeText(shareUrl);
+
+                toast.success('Public project link copied!');
+              }}
+              className="btn btn-secondary"
+            >
+              Share Project
+            </button>
           </div>
         </div>
 

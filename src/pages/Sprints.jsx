@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 
 const Sprints = () => {
-  const { projectId } = useParams();
+  const { id: projectId } = useParams();
   const sprintPlaceholders = [1, 2, 3];
   const visibleSprints = projectId ? sprintPlaceholders : [];
 
