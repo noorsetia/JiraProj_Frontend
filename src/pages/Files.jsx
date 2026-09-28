@@ -21,11 +21,20 @@ const ALLOWED_EXTENSIONS = [
   '.json'
 ];
 
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+const PREVIEW_EXTENSIONS = [
+  ...ALLOWED_EXTENSIONS,
+  '.txt',
+  '.md',
+  ...IMAGE_EXTENSIONS
+];
+
 const Files = () => {
   const { id: projectId } = useParams();
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [codePreview, setCodePreview] = useState('');
+  const [previewType, setPreviewType] = useState('text');
   const [explanation, setExplanation] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,12 +47,13 @@ const Files = () => {
     const extension =
       '.' + file.name.split('.').pop().toLowerCase();
 
-    if (!ALLOWED_EXTENSIONS.includes(extension)) {
+    if (!PREVIEW_EXTENSIONS.includes(extension)) {
       setError(
-        `Unsupported file type. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`
+        `Unsupported file type. Allowed: ${PREVIEW_EXTENSIONS.join(', ')}`
       );
       setSelectedFile(null);
       setCodePreview('');
+      setPreviewType('text');
       setExplanation('');
       return;
     }
@@ -52,6 +62,7 @@ const Files = () => {
       setError('File size must be less than 2 MB.');
       setSelectedFile(null);
       setCodePreview('');
+      setPreviewType('text');
       setExplanation('');
       return;
     }
@@ -59,6 +70,7 @@ const Files = () => {
     setError('');
     setExplanation('');
     setSelectedFile(file);
+    setPreviewType(IMAGE_EXTENSIONS.includes(extension) ? 'image' : 'text');
 
     const reader = new FileReader();
 
@@ -71,11 +83,17 @@ const Files = () => {
       setCodePreview('');
     };
 
-    reader.readAsText(file);
+    if (IMAGE_EXTENSIONS.includes(extension)) {
+      reader.readAsDataURL(file);
+    } else {
+      reader.readAsText(file);
+    }
   };
 
   const handleExplain = async () => {
-    if (!selectedFile) {
+    if (!selectedFile || !ALLOWED_EXTENSIONS.includes(
+      '.' + selectedFile.name.split('.').pop().toLowerCase()
+    )) {
       toast.error('Please select a code file first.');
       return;
     }
@@ -87,6 +105,7 @@ const Files = () => {
 
       const formData = new FormData();
       formData.append('file', selectedFile);
+      formData.append('projectId', projectId);
 
       const response = await api.post(
         '/files/explain',
@@ -162,7 +181,7 @@ const Files = () => {
             </span>
 
             <span className="text-sm text-gray-500 mt-1">
-              JS, JSX, Python, Java, HTML, CSS, JSON
+              JS, JSX, Python, Java, HTML, CSS, JSON, text, images
             </span>
 
             <span className="text-xs text-gray-400 mt-1">
@@ -173,7 +192,7 @@ const Files = () => {
               id="code-file"
               type="file"
               className="hidden"
-              accept=".js,.jsx,.py,.java,.html,.css,.json"
+              accept=".js,.jsx,.py,.java,.html,.css,.json,.txt,.md,.png,.jpg,.jpeg,.gif,.webp,.svg"
               onChange={handleFileChange}
             />
           </label>
@@ -206,32 +225,33 @@ const Files = () => {
                   </p>
                 </div>
 
-                <button
-                  onClick={handleExplain}
-                  disabled={loading}
-                  className="btn btn-primary flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2
-                        size={18}
-                        className="animate-spin"
-                      />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={18} />
-                      Explain with AI
-                    </>
-                  )}
-                </button>
+                {ALLOWED_EXTENSIONS.includes(
+                  '.' + selectedFile.name.split('.').pop().toLowerCase()
+                ) && (
+                  <button
+                    onClick={handleExplain}
+                    disabled={loading}
+                    className="btn btn-primary flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={18} />
+                        Explain with AI
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Code Preview */}
+        {/* File Preview */}
         {codePreview && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
@@ -241,13 +261,21 @@ const Files = () => {
               />
 
               <h2 className="text-lg font-semibold">
-                Code Preview
+                File Preview
               </h2>
             </div>
 
-            <pre className="bg-gray-900 text-gray-100 rounded-lg p-5 overflow-x-auto max-h-[500px] overflow-y-auto text-sm leading-6">
-              <code>{codePreview}</code>
-            </pre>
+            {previewType === 'image' ? (
+              <img
+                src={codePreview}
+                alt={`Preview of ${selectedFile?.name}`}
+                className="max-h-[500px] max-w-full rounded-lg object-contain"
+              />
+            ) : (
+              <pre className="bg-gray-900 text-gray-100 rounded-lg p-5 overflow-x-auto max-h-[500px] overflow-y-auto text-sm leading-6">
+                <code>{codePreview}</code>
+              </pre>
+            )}
           </div>
         )}
 
