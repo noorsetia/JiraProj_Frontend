@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
@@ -50,12 +51,18 @@ function App() {
             },
           }}
         />
-        
+
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
+
+          {/* Public dashboard */}
+          <Route
+            path="/public-dashboard"
+            element={<Dashboard publicView={true} />}
+          />
 
           {/* Protected routes */}
           <Route
@@ -66,6 +73,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
           <Route
             path="/projects"
             element={
@@ -186,16 +194,20 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/share/projects/:id" element={<PublicProject />} />
+
+          {/* Redirect root to public dashboard */}
           <Route
-            path="/share/projects/:id"
-            element={<PublicProject />}
+            path="/"
+            element={<Navigate to="/public-dashboard" replace />}
           />
 
-          {/* Redirect root to dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          {/* Catch all - redirect to dashboard */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Catch all */}
+          <Route
+            path="*"
+            element={<Navigate to="/public-dashboard" replace />}
+          />
         </Routes>
       </AuthProvider>
     </Router>
