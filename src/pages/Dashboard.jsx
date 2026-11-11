@@ -125,13 +125,6 @@ const Dashboard = ({ publicView = false }) => {
 
           <div className="h-px bg-gradient-to-r from-slate-200 via-slate-100 to-transparent" />
 
-          {publicView && (
-            <div className="demo-banner">
-              <span className="demo-dot" />
-              You are viewing a public demo dashboard. All statistics shown here are illustrative sample data.
-              No private project or user information is displayed.
-            </div>
-          )}
         </div>
 
         {/* Statistics Cards */}

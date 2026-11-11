@@ -57,9 +57,12 @@ const Layout = ({ children, publicView = false }) => {
             <div className="h-9 w-9 rounded-xl bg-primary-600 text-white flex items-center justify-center font-semibold">
               PM
             </div>
-            <span className="text-base font-semibold text-slate-900">
-              Project Manager
-            </span>
+            <div>
+              <span className="block text-base font-semibold text-slate-900">
+                Project Manager
+              </span>
+              {publicView && <span className="block text-[10px] font-bold uppercase tracking-wider text-primary-600">Public demo</span>}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -219,16 +222,29 @@ const Layout = ({ children, publicView = false }) => {
         <div className="hidden lg:flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
 
           <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="font-semibold text-slate-900">Workspace</span>
+            <span className="font-semibold text-slate-900">{publicView ? 'Public Demo' : 'Workspace'}</span>
             <span className="text-slate-300">/</span>
             <span>{publicView ? 'Demo overview' : location.pathname === '/dashboard' ? 'Dashboard' : 'Workspace'}</span>
           </div>
 
-          {!publicView && <Notifications />}
+          {publicView ? (
+            <div className="demo-banner !py-1.5">
+              <span className="demo-dot" />
+              <span><strong>Public demo</strong> · Illustrative data only</span>
+            </div>
+          ) : <Notifications />}
 
         </div>
 
         <main className="min-h-screen">
+          {publicView && (
+            <div className="border-b border-primary-100 bg-primary-50 px-5 py-3 lg:hidden">
+              <div className="mx-auto flex max-w-7xl items-center gap-2 text-xs font-semibold text-primary-800">
+                <span className="demo-dot shrink-0" />
+                <span><strong>Public demo page</strong> · This workspace uses illustrative sample data.</span>
+              </div>
+            </div>
+          )}
           {children}
         </main>
 
