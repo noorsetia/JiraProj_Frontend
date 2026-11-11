@@ -1,197 +1,107 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
-import { CalendarDays } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, X } from 'lucide-react';
 
-// Simple utility helpers
-const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
-const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
-const addMonths = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, 1);
-const formatDateKey = (d) => d.toISOString().slice(0, 10);
+const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+const addMonths = (date, amount) => new Date(date.getFullYear(), date.getMonth() + amount, 1);
+const dateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
-const Calendar = () => {
+const demoTasks = [
+  { _id: 'demo-1', title: 'Review launch checklist', dueDate: '2026-11-06', status: 'In Progress', project: { name: 'Platform refresh' } },
+  { _id: 'demo-2', title: 'Share mobile prototype', dueDate: '2026-11-12', status: 'To Do', project: { name: 'Mobile companion' } },
+  { _id: 'demo-3', title: 'Customer feedback review', dueDate: '2026-11-18', status: 'In Review', project: { name: 'Customer insights' } }
+];
+
+const Calendar = ({ publicView = false }) => {
   const [current, setCurrent] = useState(() => startOfMonth(new Date()));
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(publicView ? demoTasks : []);
   const [meetings, setMeetings] = useState(() => {
-    try {
-      const raw = localStorage.getItem('pm_meetings');
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem('pm_meetings') || '[]'); } catch { return []; }
   });
-
   const [showCreate, setShowCreate] = useState(false);
-  const [createDate, setCreateDate] = useState(formatDateKey(new Date()));
+  const [createDate, setCreateDate] = useState(dateKey(new Date()));
   const [newMeetingTitle, setNewMeetingTitle] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!publicView);
 
   useEffect(() => {
-    // fetch my tasks (assigned to current user)
-    const fetch = async () => {
-      setLoading(true);
+    if (publicView) return undefined;
+    const fetchTasks = async () => {
       try {
-        const res = await api.get('/tasks/my-tasks');
-        setTasks(res.data.data || []);
+        const response = await api.get('/tasks/my-tasks');
+        setTasks(response.data.data || []);
       } catch {
-        console.error('Failed to load tasks for calendar');
         toast.error('Failed to load tasks');
       } finally {
         setLoading(false);
       }
     };
+    fetchTasks();
+    return undefined;
+  }, [publicView]);
 
-    fetch();
-  }, []);
-
-  // persist meetings
   useEffect(() => {
-    try {
-      localStorage.setItem('pm_meetings', JSON.stringify(meetings));
-    } catch (e) {
-      console.error('Failed to persist meetings', e);
-    }
+    localStorage.setItem('pm_meetings', JSON.stringify(meetings));
   }, [meetings]);
 
-  const monthGrid = useMemo(() => {
-    const start = startOfMonth(current);
-    const end = endOfMonth(current);
-    // day of week (0=Sun..6=Sat)
-    const startDow = start.getDay();
-    const daysInMonth = end.getDate();
-    const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
-    const cells = [];
-
-    for (let i = 0; i < totalCells; i++) {
-      const dayOffset = i - startDow;
-      const cellDate = new Date(start);
-      cellDate.setDate(1 + dayOffset);
-      cells.push(cellDate);
-    }
-
-    return cells;
+  const cells = useMemo(() => {
+    const first = startOfMonth(current);
+    const total = Math.ceil((first.getDay() + new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate()) / 7) * 7;
+    return Array.from({ length: total }, (_, index) => new Date(current.getFullYear(), current.getMonth(), index - first.getDay() + 1));
   }, [current]);
 
   const eventsByDate = useMemo(() => {
     const map = {};
-    tasks.forEach((t) => {
-      if (!t.dueDate) return;
-      const d = new Date(t.dueDate);
-      const key = formatDateKey(d);
-      map[key] = map[key] || [];
-      map[key].push({ type: 'task', id: t._id, title: t.title, project: t.project?.name });
+    tasks.filter((task) => task.dueDate).forEach((task) => {
+      const key = dateKey(new Date(task.dueDate));
+      map[key] = [...(map[key] || []), { id: task._id, title: task.title, type: 'task', project: task.project?.name, status: task.status }];
     });
-
-    meetings.forEach((m) => {
-      const key = m.date;
-      map[key] = map[key] || [];
-      map[key].push({ type: 'meeting', id: m.id, title: m.title, time: m.time });
+    meetings.forEach((meeting) => {
+      map[meeting.date] = [...(map[meeting.date] || []), { id: meeting.id, title: meeting.title, type: 'meeting' }];
     });
-
     return map;
   }, [tasks, meetings]);
 
-  const openCreate = (dateKey) => {
-    setCreateDate(dateKey);
-    setNewMeetingTitle('');
-    setShowCreate(true);
-  };
-
   const saveMeeting = () => {
-    if (!newMeetingTitle.trim()) return toast.error('Enter meeting title');
-    const meeting = {
-      id: Date.now().toString(),
-      date: createDate,
-      title: newMeetingTitle.trim(),
-      time: ''
-    };
-    setMeetings(prev => [...prev, meeting]);
+    if (!newMeetingTitle.trim()) return toast.error('Enter a meeting title');
+    setMeetings((items) => [...items, { id: Date.now().toString(), date: createDate, title: newMeetingTitle.trim() }]);
+    setNewMeetingTitle('');
     setShowCreate(false);
     toast.success('Meeting scheduled');
   };
 
   return (
-    <Layout>
-      <div className="p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto">
-          <header className="flex items-center gap-4 pb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-100">
-              <CalendarDays className="h-6 w-6 text-primary-600" />
-            </div>
-            <div className="flex-1">
-              <h1 className="text-3xl font-semibold text-slate-900">Calendar</h1>
-              <p className="text-sm text-slate-600">View your scheduled tasks and meetings.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrent(addMonths(current, -1))}
-                className="px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200"
-              >
-                Prev
-              </button>
-              <div className="px-4 py-2 font-semibold">{current.toLocaleString(undefined, { month: 'long', year: 'numeric' })}</div>
-              <button
-                onClick={() => setCurrent(addMonths(current, 1))}
-                className="px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200"
-              >
-                Next
-              </button>
-            </div>
-          </header>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-7 gap-2 text-center text-xs text-slate-500 mb-2">
-              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-                <div key={d} className="py-2">{d}</div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-2">
-              {monthGrid.map((cellDate, idx) => {
-                const isCurrentMonth = cellDate.getMonth() === current.getMonth();
-                const key = formatDateKey(cellDate);
-                const events = eventsByDate[key] || [];
-                return (
-                  <div key={idx} className={`min-h-[110px] border rounded-md p-2 ${isCurrentMonth ? 'bg-white' : 'bg-slate-50 text-slate-400'}`}>
-                    <div className="flex items-start justify-between">
-                      <div className="text-sm font-medium">{cellDate.getDate()}</div>
-                      <button onClick={() => openCreate(key)} className="text-xs text-primary-600 hover:underline">+ meeting</button>
-                    </div>
-
-                    <div className="mt-2 space-y-1 text-left text-xs">
-                      {events.slice(0,3).map(e => (
-                        <div key={e.id} className={`rounded px-2 py-1 ${e.type === 'task' ? 'bg-emerald-100 text-emerald-900' : 'bg-blue-100 text-blue-900'}`}>
-                          <div className="truncate font-medium">{e.title}</div>
-                          {e.type === 'task' && e.project && <div className="text-[10px] text-slate-500">{e.project}</div>}
-                          {e.type === 'meeting' && e.time && <div className="text-[10px] text-slate-500">{e.time}</div>}
-                        </div>
-                      ))}
-                      {events.length > 3 && <div className="text-[11px] text-slate-400">+{events.length - 3} more</div>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+    <Layout publicView={publicView}>
+      <div className="mx-auto max-w-7xl space-y-6 p-5 sm:p-8">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><span>Workspace</span><span>/</span><span className="text-slate-600">Calendar</span></div>
+        <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div><p className="eyebrow">Plan the work</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Calendar</h1><p className="mt-2 text-sm text-slate-600">See deadlines, meetings, and team commitments at a glance.</p></div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setCurrent(startOfMonth(new Date()))} className="btn btn-secondary">Today</button>
+            <button onClick={() => setCurrent(addMonths(current, -1))} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 hover:bg-slate-50" aria-label="Previous month"><ChevronLeft className="h-4 w-4" /></button>
+            <div className="min-w-36 text-center text-sm font-bold text-slate-900">{current.toLocaleString(undefined, { month: 'long', year: 'numeric' })}</div>
+            <button onClick={() => setCurrent(addMonths(current, 1))} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 hover:bg-slate-50" aria-label="Next month"><ChevronRight className="h-4 w-4" /></button>
+            {!publicView && <button onClick={() => { setCreateDate(dateKey(new Date())); setShowCreate(true); }} className="btn btn-primary gap-2"><Plus className="h-4 w-4" /> Add event</button>}
           </div>
-
-          {/* Create meeting modal (simple) */}
-          {showCreate && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold mb-2">Schedule meeting</h3>
-                <label className="text-xs text-slate-500">Date</label>
-                <input type="date" value={createDate} onChange={(e) => setCreateDate(e.target.value)} className="w-full p-2 border rounded mb-3" />
-                <label className="text-xs text-slate-500">Title</label>
-                <input type="text" value={newMeetingTitle} onChange={(e) => setNewMeetingTitle(e.target.value)} placeholder="e.g. Client sync" className="w-full p-2 border rounded mb-3" />
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded bg-slate-100">Cancel</button>
-                  <button onClick={saveMeeting} className="px-4 py-2 rounded bg-primary-600 text-white">Save</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        </header>
+        {publicView && <div className="demo-banner"><span className="demo-dot" /> Demo calendar · illustrative deadlines only</div>}
+        <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-500"><span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-primary-500" />Task deadline</span><span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-violet-500" />Meeting</span></div>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-bold uppercase tracking-wide text-slate-500">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div key={day} className="py-3">{day}</div>)}</div>
+          {loading ? <div className="grid grid-cols-7 gap-px bg-slate-200">{cells.map((cell) => <div key={cell.toISOString()} className="min-h-28 animate-pulse bg-white" />)}</div> : <div className="grid grid-cols-7 gap-px bg-slate-200">{cells.map((cell) => {
+            const key = dateKey(cell);
+            const events = eventsByDate[key] || [];
+            const today = key === dateKey(new Date());
+            return <div key={key} className={`min-h-28 bg-white p-2 ${cell.getMonth() !== current.getMonth() ? 'bg-slate-50/70 text-slate-300' : ''}`}><div className="flex items-center justify-between"><span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${today ? 'bg-primary-600 text-white' : ''}`}>{cell.getDate()}</span>{!publicView && <button onClick={() => { setCreateDate(key); setShowCreate(true); }} className="text-slate-300 hover:text-primary-600" aria-label={`Add event on ${key}`}><Plus className="h-4 w-4" /></button>}</div><div className="mt-2 space-y-1">{events.slice(0, 3).map((event) => <div key={event.id} className={`truncate rounded-lg px-2 py-1.5 text-[11px] font-semibold ${event.type === 'task' ? 'bg-primary-50 text-primary-700' : 'bg-violet-50 text-violet-700'}`} title={event.title}><span className="mr-1">{event.type === 'task' ? '•' : '◦'}</span>{event.title}</div>)}{events.length > 3 && <div className="text-[11px] text-slate-400">+{events.length - 3} more</div>}</div></div>;
+          })}</div>}
+        </section>
+        {showCreate && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"><div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><div><p className="eyebrow">Workspace event</p><h2 className="mt-1 text-xl font-bold">Add meeting</h2></div><button onClick={() => setShowCreate(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div><label className="mt-6 block text-sm font-semibold text-slate-700">Date<input type="date" value={createDate} onChange={(event) => setCreateDate(event.target.value)} className="input mt-2" /></label><label className="mt-4 block text-sm font-semibold text-slate-700">Title<input autoFocus value={newMeetingTitle} onChange={(event) => setNewMeetingTitle(event.target.value)} className="input mt-2" placeholder="e.g. Client sync" /></label><div className="mt-6 flex justify-end gap-3"><button onClick={() => setShowCreate(false)} className="btn btn-secondary">Cancel</button><button onClick={saveMeeting} className="btn btn-primary">Save event</button></div></div></div>}
       </div>
     </Layout>
   );

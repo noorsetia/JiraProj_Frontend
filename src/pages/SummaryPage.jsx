@@ -1,139 +1,63 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
-import { FileChartPie, Users, CheckCircle, ClipboardList } from 'lucide-react';
 import api from '../utils/api';
+import { Activity, CheckCircle2, ClipboardList, FolderKanban, TrendingUp } from 'lucide-react';
 
-const StatCard = ({ title, value, subtitle, icon }) => (
-  <div className="rounded-lg border p-4 bg-white">
-    <div className="flex items-center gap-3">
-      <div className="p-2 rounded bg-emerald-50 text-emerald-600">{icon}</div>
-      <div>
-        <div className="text-xs text-slate-500">{title}</div>
-        <div className="text-2xl font-semibold">{value}</div>
-        {subtitle && <div className="text-sm text-slate-400">{subtitle}</div>}
-      </div>
-    </div>
-  </div>
-);
+const demoProjects = [
+  { _id: 'summary-platform', name: 'Platform refresh', status: 'Active', progress: 68, description: 'Core workspace improvements' },
+  { _id: 'summary-mobile', name: 'Mobile companion', status: 'Planning', progress: 24, description: 'A focused mobile experience' },
+  { _id: 'summary-insights', name: 'Customer insights', status: 'Completed', progress: 100, description: 'Feedback and roadmap synthesis' }
+];
 
-const Summary = () => {
+const Summary = ({ publicView = false }) => {
   const [analytics, setAnalytics] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [sprints, setSprints] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [compact, setCompact] = useState(false);
+  const [projects, setProjects] = useState(publicView ? demoProjects : []);
+  const [loading, setLoading] = useState(!publicView);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    if (publicView) return undefined;
     const load = async () => {
-      setLoading(true);
       try {
-        const [aRes, pRes] = await Promise.all([
-          api.get('/analytics'),
-          api.get('/projects')
-        ]);
-        setAnalytics(aRes.data?.data || aRes.data || null);
-        const projs = pRes.data?.projects || pRes.data || [];
-        setProjects(projs);
-
-        // Fetch sprints for first project (if any) to show an example
-        if (projs.length > 0) {
-          try {
-            const sRes = await api.get(`/sprints/project/${projs[0]._id || projs[0].id}`);
-            setSprints(sRes.data || []);
-          } catch {
-            // ignore sprint errors
-            setSprints([]);
-          }
-        }
-      } catch (e) {
-        console.error(e);
-        setError('Failed to load summary data. Ensure you are authenticated.');
+        const [analyticsResponse, projectResponse] = await Promise.all([api.get('/analytics'), api.get('/projects')]);
+        setAnalytics(analyticsResponse.data?.data || analyticsResponse.data || {});
+        setProjects(projectResponse.data?.projects || projectResponse.data?.data || projectResponse.data || []);
+      } catch {
+        setError('We could not load your summary. Please try again.');
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+    return undefined;
+  }, [publicView]);
+
+  const values = useMemo(() => ({
+    projects: analytics?.totalProjects ?? projects.length,
+    tasks: analytics?.totalTasks ?? (publicView ? 79 : '—'),
+    completed: analytics?.completedTasks ?? (publicView ? 52 : '—'),
+    pending: analytics?.pendingTasks ?? (publicView ? 27 : '—'),
+    completion: analytics?.completionRate ?? (publicView ? 66 : 0)
+  }), [analytics, projects.length, publicView]);
+
+  const cards = [
+    { label: 'Total projects', value: values.projects, icon: FolderKanban, color: 'bg-primary-50 text-primary-600' },
+    { label: 'Total tasks', value: values.tasks, icon: ClipboardList, color: 'bg-violet-50 text-violet-600' },
+    { label: 'Completed tasks', value: values.completed, icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Pending tasks', value: values.pending, icon: Activity, color: 'bg-amber-50 text-amber-600' }
+  ];
 
   return (
-    <Layout>
-      <div className="p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          <header className="flex items-center gap-4 pb-6 justify-between">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
-              <FileChartPie className="h-6 w-6 text-emerald-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-semibold text-slate-900">Summary</h1>
-              <p className="text-sm text-slate-600">High-level summaries and project snapshots.</p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <button onClick={() => setCompact(!compact)} className="px-3 py-1 rounded border bg-slate-50 text-sm">
-                {compact ? 'Detailed view' : 'Compact view'}
-              </button>
-            </div>
-          </header>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <StatCard title="Projects" value={analytics ? analytics.totalProjects : '—'} subtitle="Total / Active" icon={<Users className="w-5 h-5" />} />
-            <StatCard title="Tasks" value={analytics ? analytics.totalTasks : '—'} subtitle={`Done: ${analytics ? analytics.completedTasks : '—'}`} icon={<ClipboardList className="w-5 h-5" />} />
-            <StatCard title="Completion" value={analytics ? `${analytics.completionRate}%` : '—'} subtitle={`This week: ${analytics ? analytics.tasksCompletedThisWeek : '—'}`} icon={<CheckCircle className="w-5 h-5" />} />
-          </div>
-          {loading && <div className="p-4 bg-white rounded border">Loading summary...</div>}
-          {error && <div className="p-4 text-rose-600">{error}</div>}
-
-          {!loading && !error && (
-            compact ? (
-              <div className="bg-white rounded border p-4">
-                <h3 className="font-semibold mb-3">Compact Summary</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {projects.slice(0, 8).map(p => (
-                    <div key={p._id || p.id} className="p-2 border rounded text-sm">{p.name}</div>
-                  ))}
-                </div>
-                <div className="mt-4 text-sm text-slate-500">Toggle to Detailed view for full project and sprint lists.</div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <section className="col-span-2 bg-white rounded border p-4">
-                  <h3 className="font-semibold mb-3">Projects</h3>
-                  {projects.length === 0 && <div className="text-sm text-slate-500">No projects found.</div>}
-                  {projects.length > 0 && (
-                    <ul className="space-y-3">
-                      {projects.slice(0, 6).map(p => (
-                        <li key={p._id || p.id} className="p-3 border rounded">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">{p.name}</div>
-                              <div className="text-sm text-slate-500">{p.description}</div>
-                            </div>
-                            <div className="text-sm text-slate-400">Members: {p.members?.length || 0}</div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-
-                <aside className="bg-white rounded border p-4">
-                  <h3 className="font-semibold mb-3">Sprints (project sample)</h3>
-                  {sprints.length === 0 && <div className="text-sm text-slate-500">No sprints found for the selected project.</div>}
-                  {sprints.length > 0 && (
-                    <ul className="space-y-2">
-                      {sprints.slice(0, 8).map(s => (
-                        <li key={s._id || s.id} className="p-2 border rounded">
-                          <div className="font-medium">{s.name}</div>
-                          <div className="text-xs text-slate-500">{new Date(s.startDate).toLocaleDateString()} — {new Date(s.endDate).toLocaleDateString()}</div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </aside>
-              </div>
-            )
-          )}
-        </div>
+    <Layout publicView={publicView}>
+      <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-8">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><span>Workspace</span><span>/</span><span className="text-slate-600">Summary</span></div>
+        <header><p className="eyebrow">Portfolio intelligence</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Summary</h1><p className="mt-2 text-sm text-slate-600">A clear view of delivery health, project momentum, and team focus.</p></header>
+        {publicView && <div className="demo-banner"><span className="demo-dot" /> Demo summary · illustrative data only</div>}
+        {loading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{cards.map((card) => <div key={card.label} className="h-28 animate-pulse rounded-2xl bg-white" />)}</div> : error ? <div className="card py-14 text-center text-rose-600">{error}</div> : <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{cards.map((card) => { const Icon = card.icon; return <div key={card.label} className="card flex items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"><div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.color}`}><Icon className="h-5 w-5" /></div><div><p className="text-xs font-medium text-slate-500">{card.label}</p><p className="mt-1 text-2xl font-bold text-slate-950">{card.value}</p></div></div>; })}</div>
+          <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]"><section className="card"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Project performance</h2><p className="mt-1 text-sm text-slate-500">Completion across your active portfolio.</p></div><TrendingUp className="h-5 w-5 text-emerald-500" /></div><div className="mt-6 space-y-5">{projects.slice(0, 6).map((project) => { const progress = Math.min(100, Math.max(0, Number(project.progress ?? project.completion ?? 0))); return <div key={project._id || project.id}><div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800">{project.name}</p><p className="mt-0.5 text-xs text-slate-500">{project.status || 'Planning'}</p></div><span className="text-sm font-bold text-slate-700">{progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="progress-animated h-full rounded-full bg-primary-600" style={{ width: `${progress}%` }} /></div></div>; })}</div></section><section className="card"><h2 className="text-lg font-bold">Delivery snapshot</h2><p className="mt-1 text-sm text-slate-500">How work is tracking this period.</p><div className="mt-6 flex items-center gap-6"><div className="relative flex h-32 w-32 items-center justify-center rounded-full" style={{ background: `conic-gradient(#2563eb ${values.completion}%, #e2e8f0 0)` }}><div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white"><span className="text-2xl font-bold">{values.completion}%</span><span className="text-[11px] text-slate-500">complete</span></div></div><div className="space-y-3 text-sm"><p><span className="mr-2 inline-block h-2 w-2 rounded-full bg-primary-600" />Completed work</p><p><span className="mr-2 inline-block h-2 w-2 rounded-full bg-slate-200" />Remaining work</p></div></div></section></div>
+          {!projects.length && <div className="card py-14 text-center text-sm text-slate-500">No project performance data available yet.</div>}
+        </>}
       </div>
     </Layout>
   );

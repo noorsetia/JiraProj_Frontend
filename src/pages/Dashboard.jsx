@@ -106,6 +106,11 @@ const Dashboard = ({ publicView = false }) => {
 
         {/* Dashboard Header */}
         <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+            <span>Workspace</span>
+            <span>/</span>
+            <span className="text-slate-600">Dashboard</span>
+          </div>
           <h1 className="text-3xl font-semibold text-slate-900">
             {publicView
               ? 'Welcome to Jira Pro!'
@@ -121,7 +126,8 @@ const Dashboard = ({ publicView = false }) => {
           <div className="h-px bg-gradient-to-r from-slate-200 via-slate-100 to-transparent" />
 
           {publicView && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+            <div className="demo-banner">
+              <span className="demo-dot" />
               You are viewing a public demo dashboard. All statistics shown here are illustrative sample data.
               No private project or user information is displayed.
             </div>
@@ -133,7 +139,7 @@ const Dashboard = ({ publicView = false }) => {
           {stats.map((stat) => (
             <div
               key={stat.name}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -199,7 +205,7 @@ const Dashboard = ({ publicView = false }) => {
 
                 <div className="h-2 w-full rounded-full bg-slate-100">
                   <div
-                    className="h-2 rounded-full bg-primary-600"
+                    className="progress-animated h-2 rounded-full bg-primary-600"
                     style={{
                       width: `${Math.min(100, Math.max(0, dashboardData?.overview?.completionRate || 0))}%`
                     }}
@@ -226,7 +232,7 @@ const Dashboard = ({ publicView = false }) => {
 
                 <div className="h-2 w-full rounded-full bg-slate-100">
                   <div
-                    className="h-2 rounded-full bg-emerald-500"
+                    className="progress-animated h-2 rounded-full bg-emerald-500"
                     style={{
                       width: `${Math.min(100, Math.max(0, dashboardData?.overview?.myCompletionRate || 0))}%`
                     }}

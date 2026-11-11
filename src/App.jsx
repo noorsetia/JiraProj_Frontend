@@ -21,6 +21,7 @@ import Timeline from './pages/Timeline';
 import Notes from './pages/Notes';
 import Files from './pages/Files';
 import PublicProject from './pages/PublicProject';
+import PublicFeaturePage from './pages/PublicFeaturePage';
 import './index.css';
 
 function App() {
@@ -58,12 +59,22 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
-          {/* Public dashboard */}
+          {/* Public dashboard and read-only previews */}
           <Route
             path="/public-dashboard"
             element={<Dashboard publicView={true} />}
           />
-
+          <Route
+            path="/public-projects"
+            element={<Projects publicView />}
+          />
+          <Route path="/public-analytics" element={<PublicFeaturePage title="Analytics" />} />
+          <Route path="/public-calendar" element={<Calendar publicView />} />
+          <Route path="/public-forms" element={<Forms publicView />} />
+          <Route path="/public-list" element={<ListPage publicView />} />
+          <Route path="/public-summary" element={<Summary publicView />} />
+          <Route path="/public-ai-assistant" element={<AIAssistant publicView />} />
+          
           {/* Protected routes */}
           <Route
             path="/dashboard"
@@ -73,7 +84,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
           <Route
             path="/projects"
             element={

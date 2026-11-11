@@ -4,7 +4,7 @@ import { Bot, Send, Sparkles } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
-const AIAssistant = () => {
+const AIAssistant = ({ publicView = false }) => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [chat, setChat] = useState([
@@ -26,6 +26,14 @@ const AIAssistant = () => {
     setLoading(true);
 
     try {
+      if (publicView) {
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        setChat(prev => [...prev, {
+          role: 'assistant',
+          content: 'This is a safe demo preview. Sign in to connect the assistant to your authorized projects and tasks.'
+        }]);
+        return;
+      }
       console.log('🤖 Sending AI request:', { message: userMessage });
 
       // Simple, direct API call with just the message
@@ -77,20 +85,22 @@ const AIAssistant = () => {
   };
 
   return (
-    <Layout>
-      <div className="p-6 lg:p-8 h-[calc(100vh-4rem)]">
-        <div className="flex h-full max-w-4xl flex-col mx-auto">
+    <Layout publicView={publicView}>
+      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col p-5 sm:p-8">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="mb-6 flex items-center gap-2 text-xs font-medium text-slate-400"><span>Workspace</span><span>/</span><span className="text-slate-600">AI Assistant</span></div>
           <header className="flex items-center gap-4 pb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100">
-              <Bot className="h-6 w-6 text-purple-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-100">
+              <Bot className="h-6 w-6 text-primary-600" />
             </div>
             <div>
               <h1 className="text-3xl font-semibold text-slate-900">AI Assistant</h1>
-              <p className="text-sm text-slate-600">Get AI-powered insights for your projects</p>
+              <p className="text-sm text-slate-600">Ask questions, summarize work, and find your next best action.</p>
             </div>
           </header>
 
-          <div className="flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col overflow-hidden">
+          {publicView && <div className="demo-banner mb-4 self-start"><span className="demo-dot" /> Demo assistant · no private data connected</div>}
+          <div className="flex min-h-[30rem] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
               {chat.map((msg, index) => (
                 <div
@@ -135,7 +145,7 @@ const AIAssistant = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !loading && handleSend()}
-                  placeholder="Ask me anything about your projects..."
+                  placeholder={publicView ? 'Try the demo assistant...' : 'Ask about your projects...'}
                   className="input flex-1"
                   disabled={loading}
                 />
@@ -150,22 +160,22 @@ const AIAssistant = () => {
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
-                  onClick={() => setMessage('Generate tasks for a new e-commerce website project')}
+                  onClick={() => setMessage('Summarize my project progress')}
                   className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
                 >
-                  Generate tasks
+                  Summarize progress
                 </button>
                 <button
-                  onClick={() => setMessage('Suggest priorities for pending tasks')}
+                  onClick={() => setMessage('What tasks are overdue?')}
                   className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
                 >
-                  Suggest priorities
+                  Find overdue tasks
                 </button>
                 <button
-                  onClick={() => setMessage('Create a sprint plan for my project')}
+                  onClick={() => setMessage('Which tasks should I prioritize?')}
                   className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
                 >
-                  Sprint planning
+                  Prioritize tasks
                 </button>
               </div>
             </div>

@@ -62,16 +62,16 @@ const saveResponse = (templateId, response) => {
   }
 };
 
-const Forms = () => {
-  const [templates, setTemplates] = useState(loadTemplates);
+const Forms = ({ publicView = false }) => {
+  const [templates, setTemplates] = useState(publicView ? defaultTemplates : loadTemplates);
   const [selectedId, setSelectedId] = useState(templates[0]?.id || null);
   const [editing, setEditing] = useState(false);
   const [formValues, setFormValues] = useState({});
 
   useEffect(() => {
+    if (publicView) return;
     saveTemplates(templates);
-    if (!selectedId && templates.length) setSelectedId(templates[0].id);
-  }, [templates]);
+  }, [templates, publicView]);
 
   const selected = templates.find(t => t.id === selectedId);
 
@@ -108,6 +108,7 @@ const Forms = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (publicView) return toast('Sign in to submit a form');
     if (!selected) return toast.error('No form selected');
     const resp = {};
     for (const f of selected.fields) {
@@ -132,24 +133,27 @@ const Forms = () => {
   };
 
   return (
-    <Layout>
-      <div className="p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
-          <aside className="col-span-3">
-            <div className="flex items-center gap-3 mb-4">
+    <Layout publicView={publicView}>
+      <div className="mx-auto max-w-7xl space-y-6 p-5 sm:p-8">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><span>Workspace</span><span>/</span><span className="text-slate-600">Forms</span></div>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="eyebrow">Collect structured feedback</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Forms</h1><p className="mt-2 text-sm text-slate-600">Create reusable forms for issues, ideas, and project requests.</p></div>
+          {publicView && <div className="demo-banner"><span className="demo-dot" /> Demo templates · read-only preview</div>}
+        </header>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <aside className="col-span-1 lg:col-span-3">
+            <div className="mb-4 flex items-center gap-3">
               <div className="h-10 w-10 rounded-2xl bg-amber-100 flex items-center justify-center">
                 <FileText className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Forms</h2>
+                <h2 className="text-lg font-bold">Templates</h2>
                 <p className="text-sm text-slate-500">Templates & presets</p>
               </div>
             </div>
 
             <div className="space-y-2 mb-4">
-              <button onClick={createTemplate} className="w-full flex items-center gap-2 px-3 py-2 rounded bg-primary-600 text-white">
-                <PlusCircle className="w-4 h-4" /> Create template
-              </button>
+              {!publicView && <button onClick={createTemplate} className="btn btn-primary w-full gap-2"><PlusCircle className="h-4 w-4" /> Create template</button>}
             </div>
 
             <div className="rounded border p-3 bg-white">
@@ -164,7 +168,7 @@ const Forms = () => {
                         <div className="text-xs text-slate-400">{t.description}</div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button title="Delete" onClick={() => deleteTemplate(t.id)} className="text-rose-500 p-1 rounded hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
+                        {!publicView && <button title="Delete" onClick={() => deleteTemplate(t.id)} className="rounded p-1 text-rose-500 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>}
                       </div>
                     </div>
                   </li>
@@ -172,28 +176,27 @@ const Forms = () => {
               </ul>
             </div>
 
-            <div className="mt-4 rounded border p-3 bg-white">
+            <div className="card mt-4 p-4">
               <h3 className="text-sm font-semibold mb-2">Presets (Jira-like)</h3>
               <div className="space-y-2">
-                <button onClick={() => importPreset(defaultTemplates[0])} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">Import Error Report</button>
-                <button onClick={() => importPreset(defaultTemplates[1])} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">Import Feature Request</button>
+                {!publicView && <><button onClick={() => importPreset(defaultTemplates[0])} className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50">Import Error Report</button><button onClick={() => importPreset(defaultTemplates[1])} className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50">Import Feature Request</button></>}
+                {publicView && <p className="text-xs leading-5 text-slate-500">Sign in to create, edit, and collect responses from your own forms.</p>}
               </div>
             </div>
           </aside>
 
-          <main className="col-span-6">
+          <main className="col-span-1 lg:col-span-6">
             {!selected && <div className="p-4 bg-white rounded">Select or create a template to edit or fill.</div>}
 
             {selected && (
-              <div className="bg-white rounded border p-4">
+              <div className="card p-5">
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-xl font-semibold">{selected.name}</h3>
                     <p className="text-sm text-slate-500">{selected.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setEditing(!editing)} className="px-3 py-2 rounded bg-slate-100">{editing ? 'Preview' : 'Edit'}</button>
-                    <button onClick={() => { saveTemplates(templates); toast.success('Saved'); }} className="px-3 py-2 rounded bg-slate-100"><Save className="w-4 h-4" /></button>
+                    {!publicView && <><button onClick={() => setEditing(!editing)} className="btn btn-secondary">{editing ? 'Preview' : 'Edit'}</button><button onClick={() => { saveTemplates(templates); toast.success('Saved'); }} className="btn btn-secondary"><Save className="h-4 w-4" /></button></>}
                   </div>
                 </div>
 
@@ -276,8 +279,8 @@ const Forms = () => {
             )}
           </main>
 
-          <aside className="col-span-3">
-            <div className="bg-white rounded border p-4">
+          <aside className="col-span-1 lg:col-span-3">
+            <div className="card p-5">
               <h4 className="font-semibold">Preview & Responses</h4>
               {!selected && <div className="text-sm text-slate-500 mt-2">Select a template</div>}
               {selected && (
@@ -299,7 +302,7 @@ const Forms = () => {
                   <div className="mt-4">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-semibold">Responses</div>
-                      <button onClick={() => { localStorage.removeItem(RESP_KEY); toast.success('Responses cleared'); }} className="text-xs text-rose-500">Clear all</button>
+                      {!publicView && <button onClick={() => { localStorage.removeItem(RESP_KEY); toast.success('Responses cleared'); }} className="text-xs text-rose-500">Clear all</button>}
                     </div>
                     <div className="mt-2 text-sm text-slate-500">Saved responses are stored locally.</div>
                     <div className="mt-2">
@@ -316,7 +319,7 @@ const Forms = () => {
                               <pre className="text-xs mt-1 max-h-40 overflow-auto">{JSON.stringify(r.data, null, 2)}</pre>
                             </li>
                           ))}</ul>;
-                        } catch (e) {
+                        } catch {
                           return <div className="text-sm text-red-500">Failed to load responses</div>;
                         }
                       })()}

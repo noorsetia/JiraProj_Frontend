@@ -1,5 +1,5 @@
 
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
@@ -23,6 +23,8 @@ import Notifications from './Notifications';
 const Layout = ({ children, publicView = false }) => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
 
   const navigation = [
     {
@@ -30,13 +32,13 @@ const Layout = ({ children, publicView = false }) => {
       href: publicView ? '/public-dashboard' : '/dashboard',
       icon: LayoutDashboard
     },
-    { name: 'Projects', href: '/public-projects', icon: FolderKanban },
-    { name: 'Analytics', href: '/public-analytics', icon: BarChart3 },
-    { name: 'Calendar', href: '/public-calendar', icon: CalendarDays },
-    { name: 'Forms', href: '/public-forms', icon: FileText },
-    { name: 'List', href: '/public-list', icon: List },
-    { name: 'Summary', href: '/public-summary', icon: FileChartPie },
-    { name: 'AI Assistant', href: '/public-ai-assistant', icon: Bot }
+    { name: 'Projects', href: publicView ? '/public-projects' : '/projects', icon: FolderKanban },
+    { name: 'Analytics', href: publicView ? '/public-analytics' : '/analytics', icon: BarChart3 },
+    { name: 'Calendar', href: publicView ? '/public-calendar' : '/calendar', icon: CalendarDays },
+    { name: 'Forms', href: publicView ? '/public-forms' : '/forms', icon: FileText },
+    { name: 'List', href: publicView ? '/public-list' : '/list', icon: List },
+    { name: 'Summary', href: publicView ? '/public-summary' : '/summary', icon: FileChartPie },
+    { name: 'AI Assistant', href: publicView ? '/public-ai-assistant' : '/ai-assistant', icon: Bot }
   ];
 
   const handleLogout = () => {
@@ -48,8 +50,8 @@ const Layout = ({ children, publicView = false }) => {
     <div className="min-h-screen bg-slate-50">
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200">
-        <div className="flex items-center justify-between px-4 py-3">
+      <div className="lg:hidden h-14 bg-white border-b border-slate-200">
+        <div className="flex h-full items-center justify-between px-4">
 
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-xl bg-primary-600 text-white flex items-center justify-center font-semibold">
@@ -76,8 +78,10 @@ const Layout = ({ children, publicView = false }) => {
       </div>
 
       {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out ${
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 bg-white border-r border-slate-200 transform transition-all duration-300 ease-in-out ${
+          collapsed ? 'lg:w-[76px]' : 'lg:w-64'
+        } w-72 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}
       >
@@ -85,13 +89,13 @@ const Layout = ({ children, publicView = false }) => {
         <div className="flex flex-col h-full">
 
           {/* Brand */}
-          <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200">
+          <div className={`flex items-center ${collapsed ? 'lg:justify-center' : ''} gap-3 px-5 py-5 border-b border-slate-200`}>
 
             <div className="h-10 w-10 rounded-2xl bg-primary-600 text-white flex items-center justify-center font-semibold">
               PM
             </div>
 
-            <div>
+            <div className={collapsed ? 'lg:hidden' : ''}>
               <p className="text-sm font-semibold text-slate-900">
                 Project Manager
               </p>
@@ -99,12 +103,19 @@ const Layout = ({ children, publicView = false }) => {
               <p className="text-xs text-slate-500">
                 {publicView ? 'Public Demo' : 'Workspace'}
               </p>
+              <button
+                onClick={() => setCollapsed((value) => !value)}
+                className="absolute -right-3 top-7 hidden h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-primary-600 lg:flex"
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                <span className="text-xs">{collapsed ? '›' : '‹'}</span>
+              </button>
             </div>
 
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className={`flex-1 px-3 py-6 space-y-1.5 overflow-y-auto ${collapsed ? 'lg:px-2' : ''}`}>
 
             {navigation.map((item) => (
               <NavLink
@@ -112,25 +123,27 @@ const Layout = ({ children, publicView = false }) => {
                 to={item.href}
                 end={item.name === 'Dashboard'}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all ${
+                  `group flex items-center ${collapsed ? 'lg:justify-center lg:px-0' : ''} gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all ${isActive ? 'active' : ''} ${
                     isActive
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      ? 'bg-primary-50 text-primary-700 shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
                   }`
                 }
                 onClick={() => setSidebarOpen(false)}
+                title={collapsed ? item.name : undefined}
               >
-                <item.icon className="w-5 h-5" />
-                {item.name}
+                <item.icon className="w-[18px] h-[18px] shrink-0" />
+                <span className={collapsed ? 'lg:hidden' : ''}>{item.name}</span>
+                <span className={`ml-auto h-1.5 w-1.5 rounded-full bg-primary-600 opacity-0 transition-opacity group-[.active]:opacity-100 ${collapsed ? 'lg:hidden' : ''}`} />
               </NavLink>
             ))}
 
           </nav>
 
           {/* User Profile and Footer */}
-          <div className="p-4 border-t border-slate-200">
+          <div className={`p-3 border-t border-slate-200 ${collapsed ? 'lg:px-2' : ''}`}>
 
-            <div className="flex items-center gap-3 mb-4">
+            <div className={`flex items-center ${collapsed ? 'lg:justify-center' : ''} gap-3 mb-4`}>
 
               <div
                 className={`flex items-center justify-center w-10 h-10 rounded-full ${
@@ -142,7 +155,7 @@ const Layout = ({ children, publicView = false }) => {
                 {publicView ? 'GD' : getInitials(user?.name)}
               </div>
 
-              <div className="min-w-0">
+              <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
 
                 <p className="text-sm font-semibold text-slate-900 truncate">
                   {publicView ? 'Guest Visitor' : user?.name || 'User'}
@@ -161,11 +174,11 @@ const Layout = ({ children, publicView = false }) => {
 
                 <Link
                   to="/login"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors"
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors ${collapsed ? 'lg:px-2' : ''}`}
                   onClick={() => setSidebarOpen(false)}
                 >
                   <LogIn className="w-4 h-4" />
-                  Login
+                  <span className={collapsed ? 'lg:hidden' : ''}>Login</span>
                 </Link>
 
                 <Link
@@ -174,24 +187,23 @@ const Layout = ({ children, publicView = false }) => {
                   onClick={() => setSidebarOpen(false)}
                 >
                   <UserPlus className="w-4 h-4" />
-                  Create Account
+                  <span className={collapsed ? 'lg:hidden' : ''}>Create Account</span>
                 </Link>
 
               </div>
             ) : (
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors"
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors ${collapsed ? 'lg:px-2' : ''}`}
               >
                 <LogOut className="w-4 h-4" />
-                Logout
+                <span className={collapsed ? 'lg:hidden' : ''}>Logout</span>
               </button>
             )}
 
           </div>
-
         </div>
-      </div>
+      </aside>
 
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -202,19 +214,21 @@ const Layout = ({ children, publicView = false }) => {
       )}
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`transition-[padding] duration-300 ${collapsed ? 'lg:pl-[76px]' : 'lg:pl-64'}`}>
 
         <div className="hidden lg:flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
 
-          <div className="text-sm text-slate-500">
-            {publicView ? 'Welcome to Jira Pro Demo' : 'Welcome back'}
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <span className="font-semibold text-slate-900">Workspace</span>
+            <span className="text-slate-300">/</span>
+            <span>{publicView ? 'Demo overview' : location.pathname === '/dashboard' ? 'Dashboard' : 'Workspace'}</span>
           </div>
 
           {!publicView && <Notifications />}
 
         </div>
 
-        <main className="min-h-screen pt-16 lg:pt-0">
+        <main className="min-h-screen">
           {children}
         </main>
 
